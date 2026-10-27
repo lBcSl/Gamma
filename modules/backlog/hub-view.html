@@ -1,0 +1,225 @@
+<!-- Tela do Backlog no HUB. As abas (data-slot) vão para a barra do topo; o resto, para o conteúdo. -->
+<nav class="tabs" data-slot="abas-topo" aria-label="Visões">
+  <button class="tab-btn active" data-view="backlog">Backlog geral</button>
+  <button class="tab-btn" data-view="adormecidos">OS / Atualizado / Portabilidade</button>
+  <button class="tab-btn" data-view="historico">Histórico / Relatórios</button>
+</nav>
+
+<div class="page-head">
+  <p class="eyebrow">Controle de chamados</p>
+  <h1>Dashboard de Chamados</h1>
+</div>
+
+<!-- BACKLOG GERAL -->
+<section class="view active" id="view-backlog">
+  <div class="counters" id="backlogCounters"></div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Chamados</h2>
+        <p class="sub">Clique no status ou na categoria para filtrar</p>
+      </div>
+      <div class="view-toggle">
+        <div class="segmented">
+          <button class="viewmode-btn active" data-viewmode="geral">Backlog geral</button>
+          <button class="viewmode-btn" data-viewmode="hoje">Somente hoje</button>
+        </div>
+        <label class="check-mostrar-todos" id="wrapMostrarTodos">
+          <input type="checkbox" id="mostrarTodos" />
+          Mostrar finalizados de dias anteriores
+        </label>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="text" id="filtroBusca" placeholder="Buscar por número ou categoria..." aria-label="Buscar" />
+      </div>
+      <select id="filtroTipo" aria-label="Tipo"><option value="">Todos os tipos</option></select>
+      <select id="filtroStatus" aria-label="Status"><option value="">Todos os status</option></select>
+      <select id="filtroCanal" aria-label="Canal">
+        <option value="">Todos os canais</option>
+        <option value="Voz">Voz</option>
+        <option value="ASC">ASC</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>N°</th><th>Tipo</th><th>Categoria</th><th>Canal</th><th>Status</th><th>Aberto em</th><th>Parado há</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="backlogBody"></tbody>
+      </table>
+    </div>
+    <p class="empty hidden" id="backlogEmpty">Nenhum chamado em aberto encontrado.</p>
+  </div>
+</section>
+
+<!-- ADORMECIDOS -->
+<section class="view" id="view-adormecidos">
+  <div class="counters" id="adormecidosCounters"></div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Sem atualização</h2>
+        <p class="sub">Em aberto desde ontem sem mudança, OS/Atualizado sem data ou com a data vencida</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>N°</th><th>Tipo</th><th>Categoria</th><th>Status</th><th>Motivo</th><th>Parado há</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="semAtualizacaoBody"></tbody>
+      </table>
+    </div>
+    <p class="empty hidden" id="semAtualizacaoEmpty">Tudo em dia: nenhum chamado parado.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Agendados - OS e Atualizado</h2>
+        <p class="sub">Por data, OS sem data ficam no fim</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>N°</th><th>Tipo</th><th>Categoria</th><th>Status</th><th>Data marcada</th><th>Parado há</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="agendadosBody"></tbody>
+      </table>
+    </div>
+    <p class="empty hidden" id="agendadosEmpty">Nenhum chamado em OS ou Atualizado.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Portabilidades</h2>
+        <p class="sub">Por data da Janela</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>N°</th><th>Portabilidade</th><th>Etapa</th><th>Janela</th><th>Parado há</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="portabilidadesBody"></tbody>
+      </table>
+    </div>
+    <p class="empty hidden" id="portabilidadesEmpty">Nenhuma portabilidade em aberto.</p>
+  </div>
+
+</section>
+
+<!-- HISTÓRICO -->
+<section class="view" id="view-historico">
+  <div class="historico-layout">
+    <div class="card dias-card">
+      <h2>Dias registrados</h2>
+      <div class="dias-lista" id="diasLista"></div>
+    </div>
+    <div class="card dia-detalhe">
+      <div class="card-head">
+        <div>
+          <h2 id="diaSelecionadoLabel">Selecione um dia à esquerda.</h2>
+          <p class="sub">Texto pronto para colar</p>
+        </div>
+        <button id="btnCopiarHistorico" class="btn-primary hidden">Copiar texto</button>
+      </div>
+      <textarea id="relatorioHistorico" rows="16" readonly></textarea>
+    </div>
+  </div>
+</section>
+
+<!-- MODAL DE EDIÇÃO -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+    <div class="modal-header">
+      <div>
+        <p class="eyebrow">Editar chamado</p>
+        <h2 id="modalTitulo"><span id="modalNumero"></span></h2>
+      </div>
+      <button class="modal-close" id="modalFechar" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <form id="formEditar">
+      <label>Tipo
+        <select id="m-tipo" required></select>
+      </label>
+
+      <div id="m-wrap-categoriaDP" class="cond hidden">
+        <label>Departamento
+          <select id="m-categoriaDP"></select>
+        </label>
+
+        <!-- Portabilidade: status vem da etapa, sem Categoria/Canal/Status -->
+        <div id="m-wrap-portabilidade" class="port hidden">
+          <div class="seg-port" role="group" aria-label="Tipo de portabilidade">
+            <button type="button" class="seg-btn active" data-sub="Externa">Externa</button>
+            <button type="button" class="seg-btn" data-sub="Interna">Interna</button>
+          </div>
+          <div class="row-2">
+            <label>Etapa
+              <select id="m-etapa"></select>
+            </label>
+            <label>Data da Janela
+              <input type="date" id="m-dataJanela" />
+            </label>
+          </div>
+          <div class="status-auto">
+            <span>Status (automático)</span>
+            <span class="badge" id="m-statusAuto"></span>
+          </div>
+        </div>
+      </div>
+
+      <label id="m-wrap-categoria">Categoria
+        <select id="m-categoria"></select>
+      </label>
+
+      <label id="m-wrap-vinculado" class="cond hidden">N° do chamado vinculado
+        <input type="text" id="m-vinculado" autocomplete="off" />
+      </label>
+
+      <div class="row-2" id="m-wrap-canalStatus">
+        <label>Canal
+          <select id="m-canal">
+            <option value="">-</option>
+            <option value="Voz">Voz</option>
+            <option value="ASC">ASC</option>
+          </select>
+        </label>
+
+        <label>Status
+          <select id="m-status" required></select>
+        </label>
+      </div>
+
+      <label id="m-wrap-dataPrevista" class="cond hidden"><span id="m-dataPrevistaLabel">Data do agendamento</span>
+        <input type="date" id="m-dataPrevista" />
+        <span class="hint">Opcional</span>
+      </label>
+
+      <button type="submit" class="btn-primary">Salvar alterações</button>
+      <button type="button" id="m-btnExcluir" class="btn-danger">Excluir chamado</button>
+      <p class="feedback" id="modalFeedback"></p>
+    </form>
+  </div>
+</div>

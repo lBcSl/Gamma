@@ -1,5 +1,5 @@
 // tema.js
-// Tema claro/escuro compartilhado entre popup e dashboard.
+// Tema claro/escuro compartilhado entre popup e HUB.
 // Carregado no <head> (antes do CSS pintar) para não piscar o tema errado.
 // Sem escolha salva, segue o tema do sistema. A escolha fica no localStorage,
 // que é o mesmo para todas as páginas da extensão.
@@ -50,7 +50,7 @@
 
   aplicar();
   sistemaEscuro.addEventListener("change", aplicar);
-  // Mudou no popup com o dashboard aberto (ou o contrário): atualiza na hora.
+  // Mudou no popup com o HUB aberto (ou o contrário): atualiza na hora.
   window.addEventListener("storage", (e) => {
     if (e.key === CHAVE) aplicar();
   });

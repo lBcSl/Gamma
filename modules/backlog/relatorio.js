@@ -1,6 +1,9 @@
-// report.js
+// relatorio.js
 // Monta o texto do relatório diário no mesmo formato usado hoje,
 // a partir dos chamados cadastrados no dia.
+
+import { STATUS_COM_DATA, SUBTIPOS_DP_SEM_CATEGORIA } from "./dados.js";
+import { formatarDataCurta } from "../../core/datas.js";
 
 // OS e Atualizado levam a data marcada no fim: "... - OS 27/10."
 function statusComData(c) {
@@ -20,7 +23,6 @@ function linhaBacklog(c) {
 // Reincidência e Portabilidade não têm categoria própria - a informação já está
 // completa só com o sub-tipo. Os demais (Departamento, CSAT/ANATEL, Suspensão,
 // Solicitação de contato) continuam usando a categoria normalmente.
-// (constante SUBTIPOS_DP_SEM_CATEGORIA definida em storage.js)
 
 function linhaDepartamento(c) {
   const partes = [c.numero, c.categoriaDP];
@@ -50,7 +52,7 @@ function montarSecao(titulo, chamados, montaLinha) {
   return `- ${titulo}\n${linhas}\n`;
 }
 
-function gerarRelatorio(chamadosDoDia, turno, diaKey) {
+export function gerarRelatorio(chamadosDoDia, turno, diaKey) {
   const [ano, mes, dia] = diaKey.split("-");
   const cabecalho =
     `DATA ${dia}/${mes}\n` +
