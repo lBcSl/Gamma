@@ -1,0 +1,146 @@
+<!-- Abas do Backlog no popup. As abas (data-slot) vão para a linha de abas; os painéis, para o conteúdo. -->
+<nav class="tabs" data-slot="abas" aria-label="Abas">
+  <button class="tab-btn active" data-tab="novo">Novo</button>
+  <button class="tab-btn" data-tab="buscar">Buscar</button>
+  <button class="tab-btn" data-tab="dia">Do dia</button>
+  <button class="tab-btn" data-tab="relatorio">Relatório</button>
+</nav>
+
+<!-- ABA: NOVO CHAMADO -->
+<section class="tab-panel active" id="tab-novo">
+  <form id="formNovo" class="card">
+    <label>N° do chamado / OS
+      <input type="text" id="f-numero" required autocomplete="off" placeholder="Ex: 12695181" />
+    </label>
+
+    <label>Tipo
+      <select id="f-tipo" required></select>
+    </label>
+
+    <div id="wrap-categoriaDP" class="cond hidden">
+      <label>Departamento
+        <select id="f-categoriaDP"></select>
+      </label>
+
+      <!-- Portabilidade: status vem da etapa, sem Categoria/Canal/Status -->
+      <div id="wrap-portabilidade" class="port hidden">
+        <div class="seg-port" role="group" aria-label="Tipo de portabilidade">
+          <button type="button" class="seg-btn active" data-sub="Externa">Externa</button>
+          <button type="button" class="seg-btn" data-sub="Interna">Interna</button>
+        </div>
+        <label>Etapa
+          <select id="f-etapa"></select>
+        </label>
+        <label>Data
+          <input type="date" id="f-dataJanela" />
+        </label>
+        <div class="status-auto">
+          <span>Status (automático)</span>
+          <span class="badge" id="f-statusAuto"></span>
+        </div>
+      </div>
+    </div>
+
+    <label id="wrap-categoria">Categoria
+      <select id="f-categoria" required></select>
+    </label>
+
+    <label id="wrap-vinculado" class="cond hidden">N° do chamado vinculado
+      <input type="text" id="f-vinculado" autocomplete="off" placeholder="Deixe vazio se for adormecido" />
+    </label>
+
+    <div class="row-2" id="wrap-canalStatus">
+      <label>Canal
+        <select id="f-canal">
+          <option value="">-</option>
+          <option value="Voz">Voz</option>
+          <option value="ASC">ASC</option>
+        </select>
+      </label>
+
+      <label>Status
+        <select id="f-status" required></select>
+      </label>
+    </div>
+
+    <label id="wrap-dataPrevista" class="cond hidden"><span id="f-dataPrevistaLabel">Data do novo contato</span>
+      <input type="date" id="f-dataPrevista" />
+      <span class="hint">Opcional</span>
+    </label>
+
+    <button type="submit" class="btn-primary">Salvar chamado</button>
+    <p class="feedback" id="feedbackNovo"></p>
+  </form>
+</section>
+
+<!-- ABA: BUSCAR / ATUALIZAR -->
+<section class="tab-panel" id="tab-buscar">
+  <label class="search">
+    <span class="sr-only">N° do chamado</span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input type="text" id="s-numero" autocomplete="off" placeholder="Digite o número e pressione Enter" />
+  </label>
+  <div id="resultadoBusca" class="card result-box hidden">
+    <div>
+      <p class="result-title" id="rb-titulo"></p>
+      <p class="result-meta" id="rb-meta"></p>
+    </div>
+    <div id="wrap-buscaStatus" class="stack">
+      <label>Novo status
+        <select id="s-novoStatus"></select>
+      </label>
+      <label id="wrap-dataPrevistaBusca" class="cond hidden"><span id="s-dataPrevistaLabel">Data do agendamento</span>
+        <input type="date" id="s-dataPrevista" />
+        <span class="hint">Opcional</span>
+      </label>
+      <button id="btnAtualizarStatus" class="btn-primary">Atualizar status</button>
+      <button id="btnFinalizarOS" class="btn-secondary hidden">Finalizar OS</button>
+    </div>
+
+    <div id="wrap-buscaPortabilidade" class="stack hidden">
+      <div class="cond">
+        <label>Nova etapa
+          <select id="s-etapa"></select>
+        </label>
+        <label>Data da Janela
+          <input type="date" id="s-dataJanela" />
+        </label>
+      </div>
+      <button id="btnAtualizarEtapa" class="btn-primary">Atualizar etapa</button>
+    </div>
+    <button id="btnExcluirChamado" class="btn-danger">Excluir chamado</button>
+  </div>
+  <p class="feedback" id="feedbackBusca"></p>
+</section>
+
+<!-- ABA: DO DIA -->
+<section class="tab-panel" id="tab-dia">
+  <button id="btnAbrirDashboard" class="btn-dash">
+    Abrir Dashboard
+    <span class="arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></span>
+  </button>
+  <div class="counters" id="counters"></div>
+  <div class="card list-card">
+    <h2>Chamados de hoje</h2>
+    <div id="listaDia" class="list"></div>
+  </div>
+</section>
+
+<!-- ABA: RELATÓRIO -->
+<section class="tab-panel" id="tab-relatorio">
+  <div class="card">
+    <h2>Filas do turno</h2>
+    <div class="turno-grid">
+      <label>N2 Início <input type="text" id="t-n2i" placeholder="00" /></label>
+      <label>N2 Fim <input type="text" id="t-n2f" placeholder="00" /></label>
+      <label>ASC Início <input type="text" id="t-asci" placeholder="00" /></label>
+      <label>ASC Fim <input type="text" id="t-ascf" placeholder="00" /></label>
+    </div>
+    <button id="btnGerar" class="btn-primary">Gerar relatório do dia</button>
+  </div>
+  <div class="card">
+    <textarea id="relatorioTexto" rows="12" readonly placeholder="O texto do relatório aparece aqui..." aria-label="Texto do relatório"></textarea>
+    <button id="btnCopiar" class="btn-secondary hidden">Copiar texto</button>
+  </div>
+  <p class="feedback" id="feedbackRelatorio"></p>
+</section>

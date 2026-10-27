@@ -1,56 +1,49 @@
-// popup.js
+// popup-view.js
+// Abas do Backlog no popup: novo chamado, busca/atualização, chamados do dia e relatório.
+
+import {
+  TIPOS,
+  STATUS_COM_DATA,
+  isFinalizado,
+  isPortabilidade,
+  etapasPortabilidade,
+  statusDerivadoPortabilidade,
+  statusClass,
+  getData,
+  addChamado,
+  findChamado,
+  updateChamadoStatus,
+  finalizarOS,
+  salvarEtapaPortabilidade,
+  deleteChamado,
+  getChamadosDoDia,
+  getChamadosDoRelatorio,
+  getTurno,
+  saveTurno
+} from "./dados.js";
+import { gerarRelatorio } from "./relatorio.js";
+import { formatarDataLonga, todayKey } from "../../core/datas.js";
+import { fillSelect, montarTemplate } from "../../core/ui.js";
+
 let CONFIG = null; // categorias, categoriasDP, statusList (cache local)
 
-document.addEventListener("DOMContentLoaded", async () => {
+export async function montar(conteudo) {
+  await montarTemplate(new URL("./popup-view.html", import.meta.url), conteudo);
   CONFIG = await getData();
-  setupTabs();
-  setupTodayLabel();
   populateSelects();
   setupPortabilidadeNovo();
   setupFormNovo();
   setupBusca();
   setupTurnoInputs();
   setupRelatorio();
-  setupConfig();
   await renderDoDia();
-});
-
-// ---------- tabs ----------
-function setupTabs() {
-  const buttons = document.querySelectorAll(".tab-btn");
-  buttons.forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      buttons.forEach((b) => b.classList.remove("active"));
-      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
-      if (btn.dataset.tab === "dia") await renderDoDia();
-    });
-  });
 }
 
-function setupTodayLabel() {
-  const d = new Date();
-  document.getElementById("todayLabel").textContent = d.toLocaleDateString("pt-BR");
+export async function aoMostrarAba(aba) {
+  if (aba === "dia") await renderDoDia();
 }
 
 // ---------- selects ----------
-function fillSelect(select, options, placeholder) {
-  select.innerHTML = "";
-  if (placeholder) {
-    const opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = placeholder;
-    select.appendChild(opt);
-  }
-  options.forEach((o) => {
-    const opt = document.createElement("option");
-    opt.value = o;
-    opt.textContent = o;
-    select.appendChild(opt);
-  });
-}
-
 function populateSelects() {
   fillSelect(document.getElementById("f-tipo"), TIPOS.map((t) => t.label), "Selecione...");
   fillSelect(document.getElementById("f-categoria"), CONFIG.categorias);
@@ -123,7 +116,7 @@ function atualizarStatusAuto() {
   const status = statusDerivadoPortabilidade(document.getElementById("f-etapa").value);
   const el = document.getElementById("f-statusAuto");
   el.textContent = status;
-  el.className = `badge ${statusToBadgeClass(status)}`;
+  el.className = `badge ${statusClass(status)}`;
 }
 
 function labelDataPrevista(status) {
@@ -417,15 +410,9 @@ function aplicarUIDataBusca() {
 }
 
 // ---------- do dia ----------
-// Classe visual do status (ex: "Encaminhado" -> "st-encaminhado"), igual ao dashboard.
-function statusToBadgeClass(status) {
-  const slug = (status || "").toLowerCase().normalize("NFD").replace(/[^a-z]/g, "");
-  return `st-${slug}`;
-}
-
 async function renderDoDia() {
   document.getElementById("btnAbrirDashboard").onclick = () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
+    chrome.tabs.create({ url: chrome.runtime.getURL("hub/hub.html#/backlog") });
   };
   const chamados = await getChamadosDoDia();
   const counters = document.getElementById("counters");
@@ -453,7 +440,7 @@ async function renderDoDia() {
             .filter(Boolean)
             .join(" · ")}</div>
         </div>
-        <span class="badge ${statusToBadgeClass(c.status)}">${c.status}</span>
+        <span class="badge ${statusClass(c.status)}">${c.status}</span>
       </div>`
     )
     .join("");
@@ -500,25 +487,5 @@ function setupRelatorio() {
     const feedback = document.getElementById("feedbackRelatorio");
     feedback.textContent = "Copiado! Cole no Doc do relatório.";
     feedback.className = "feedback ok";
-  });
-}
-
-// ---------- config / backup ----------
-function setupConfig() {
-  document.getElementById("btnExportar").addEventListener("click", () => exportBackup());
-
-  document.getElementById("inputImportar").addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    const feedback = document.getElementById("feedbackConfig");
-    if (!file) return;
-    try {
-      const text = await file.text();
-      await importBackup(text);
-      feedback.textContent = "Backup importado com sucesso. Reabra a extensão.";
-      feedback.className = "feedback ok";
-    } catch (err) {
-      feedback.textContent = "Arquivo inválido.";
-      feedback.className = "feedback err";
-    }
   });
 }

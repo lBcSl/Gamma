@@ -1,7 +1,30 @@
-// dashboard.js
+// hub-view.js
+// Tela do Backlog no HUB: backlog geral, OS/Atualizado/Portabilidade, histórico e edição.
 
-document.addEventListener("DOMContentLoaded", async () => {
-  document.getElementById("todayLabel").textContent = new Date().toLocaleDateString("pt-BR");
+import {
+  TIPOS,
+  STATUS_COM_DATA,
+  isFinalizado,
+  isPortabilidade,
+  etapasPortabilidade,
+  statusDerivadoPortabilidade,
+  statusClass,
+  getData,
+  findChamado,
+  updateChamado,
+  finalizarOS,
+  deleteChamado,
+  diaFinalizacao,
+  entraNoRelatorio,
+  getChamadosDoRelatorio,
+  getTurno
+} from "./dados.js";
+import { gerarRelatorio } from "./relatorio.js";
+import { formatarDataCurta, formatarDataLonga, diasAte, todayKey } from "../../core/datas.js";
+import { fillSelect, montarTemplate } from "../../core/ui.js";
+
+export async function montar(conteudo) {
+  await montarTemplate(new URL("./hub-view.html", import.meta.url), conteudo);
   setupTabs();
   setupModal();
   setupViewToggle();
@@ -10,7 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await renderBacklog();
   await renderAdormecidos();
   await renderHistorico();
-});
+}
 
 function setupTabs() {
   const buttons = document.querySelectorAll(".tab-btn");
@@ -44,12 +67,6 @@ function formatarData(iso) {
 function formatarDias(dias) {
   if (dias <= 0) return "Hoje";
   return dias === 1 ? "1 dia" : `${dias} dias`;
-}
-
-// Classe visual do status (ex: "Encaminhado" -> "st-encaminhado").
-function statusClass(status) {
-  const slug = (status || "").toLowerCase().normalize("NFD").replace(/[^a-z]/g, "");
-  return `st-${slug}`;
 }
 
 // Por que o chamado precisa de atenção ("" = está em dia). Entra no bloco "Sem atualização":
@@ -443,22 +460,6 @@ function vincularFiltrosClicaveis(container) {
       input.value = input.value === valor ? "" : valor;
       renderBacklog();
     });
-  });
-}
-
-function fillSelect(select, options, placeholder) {
-  select.innerHTML = "";
-  if (placeholder) {
-    const opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = placeholder;
-    select.appendChild(opt);
-  }
-  options.forEach((o) => {
-    const opt = document.createElement("option");
-    opt.value = o;
-    opt.textContent = o;
-    select.appendChild(opt);
   });
 }
 
