@@ -382,6 +382,7 @@ td.clicavel:hover { text-decoration: underline; text-decoration-style: dotted; }
   white-space: nowrap;
 }
 .acoes { display: flex; gap: 6px; justify-content: flex-end; }
+.grid td.num .cliente { display: block; margin-top: 2px; font-size: 12px; font-weight: 500; color: var(--text-dim); white-space: normal; }
 
 .empty { text-align: center; color: var(--text-dim); padding: 24px 0; font-size: 14px; margin: 0; }
 .hidden { display: none !important; }

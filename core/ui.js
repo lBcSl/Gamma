@@ -32,3 +32,8 @@ export async function montarTemplate(url, container) {
   });
   container.prepend(tpl.content);
 }
+
+// Texto vindo de fora (ex: nome do cliente lido do HelpDesk) antes de ir para innerHTML.
+export function escaparHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
+}

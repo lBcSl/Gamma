@@ -21,7 +21,8 @@ import {
 } from "./dados.js";
 import { gerarRelatorio } from "./relatorio.js";
 import { formatarDataCurta, formatarDataLonga, diasAte, todayKey } from "../../core/datas.js";
-import { fillSelect, montarTemplate } from "../../core/ui.js";
+import { fillSelect, montarTemplate, escaparHtml } from "../../core/ui.js";
+import { urlDeChamado } from "./helpdesk.js";
 
 export async function montar(conteudo) {
   await montarTemplate(new URL("./hub-view.html", import.meta.url), conteudo);
@@ -137,6 +138,11 @@ function dataCellHtml(dataStr) {
   return `<div class="data-cell">${dataStr ? `<strong>${formatarDataLonga(dataStr)}</strong>` : ""}${quandoHtml(dataStr)}</div>`;
 }
 
+// Coluna N°: número e, embaixo, o nome do cliente (quando o chamado foi puxado do HelpDesk).
+function numeroHtml(c) {
+  return c.cliente ? `${c.numero}<span class="cliente">${escaparHtml(c.cliente)}</span>` : c.numero;
+}
+
 // Ordena por data (mais próxima/vencida primeiro); sem data vai para o fim.
 function compararPorData(a, b) {
   if (!a && !b) return 0;
@@ -149,14 +155,17 @@ const ICONE_EDITAR =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
 const ICONE_FINALIZAR_OS =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+const ICONE_HELPDESK =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
 
-// Botões da última coluna: "Finalizar OS" (só em OS) + Editar.
+// Botões da última coluna: "Finalizar OS" (só em OS) + Abrir no HelpDesk + Editar.
 function acoesHtml(c) {
   const finalizar =
     c.status === "OS"
       ? `<button class="btn-icon" data-finalizar-os="${c.numero}" title="Finalizar OS" aria-label="Finalizar OS do chamado ${c.numero}">${ICONE_FINALIZAR_OS}</button>`
       : "";
-  return `<div class="acoes">${finalizar}<button class="btn-icon" data-editar="${c.numero}" title="Editar" aria-label="Editar chamado ${c.numero}">${ICONE_EDITAR}</button></div>`;
+  const helpdesk = `<a class="btn-icon" href="${urlDeChamado(c.numero)}" target="_blank" rel="noopener" title="Abrir no HelpDesk" aria-label="Abrir chamado ${c.numero} no HelpDesk">${ICONE_HELPDESK}</a>`;
+  return `<div class="acoes">${finalizar}${helpdesk}<button class="btn-icon" data-editar="${c.numero}" title="Editar" aria-label="Editar chamado ${c.numero}">${ICONE_EDITAR}</button></div>`;
 }
 
 // ---------- filtros ----------
@@ -236,7 +245,8 @@ async function renderBacklog() {
       (c) =>
         c.numero.toLowerCase().includes(busca) ||
         (c.categoria || "").toLowerCase().includes(busca) ||
-        (c.categoriaDP || "").toLowerCase().includes(busca)
+        (c.categoriaDP || "").toLowerCase().includes(busca) ||
+        (c.cliente || "").toLowerCase().includes(busca)
     );
   }
 
@@ -268,7 +278,7 @@ async function renderBacklog() {
       const detalhe = detalheStatus(c);
       return `
       <tr>
-        <td class="num">${c.numero}</td>
+        <td class="num">${numeroHtml(c)}</td>
         <td>${tipoLabel}</td>
         <td class="clicavel" data-filtro-categoria="${categoriaExibida(c) === "-" ? "" : categoriaExibida(c)}">${categoriaExibida(c)}</td>
         <td>${c.canal ? `<span class="badge canal">${c.canal}</span>` : "-"}</td>
@@ -325,7 +335,7 @@ async function renderAdormecidos() {
 
   renderBloco("semAtualizacaoBody", "semAtualizacaoEmpty", semAtualizacao, (c) => `
       <tr>
-        <td class="num">${c.numero}</td>
+        <td class="num">${numeroHtml(c)}</td>
         <td>${tipoLabel(c)}</td>
         <td>${categoriaExibida(c)}</td>
         <td><span class="badge ${statusClass(c.status)}">${c.status}</span></td>
@@ -336,7 +346,7 @@ async function renderAdormecidos() {
 
   renderBloco("agendadosBody", "agendadosEmpty", agendados, (c) => `
       <tr>
-        <td class="num">${c.numero}</td>
+        <td class="num">${numeroHtml(c)}</td>
         <td>${tipoLabel(c)}</td>
         <td>${c.categoria || "-"}</td>
         <td><span class="badge ${statusClass(c.status)}">${c.status}</span></td>
@@ -347,7 +357,7 @@ async function renderAdormecidos() {
 
   renderBloco("portabilidadesBody", "portabilidadesEmpty", portabilidades, (c) => `
       <tr>
-        <td class="num">${c.numero}</td>
+        <td class="num">${numeroHtml(c)}</td>
         <td><span class="badge canal">${c.subtipoPortabilidade || "Externa"}</span></td>
         <td>${c.etapaPortabilidade || "-"}</td>
         <td>${dataCellHtml(c.dataJanela)}</td>
