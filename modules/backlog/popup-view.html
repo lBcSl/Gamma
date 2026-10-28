@@ -9,6 +9,18 @@
 <!-- ABA: NOVO CHAMADO -->
 <section class="tab-panel active" id="tab-novo">
   <form id="formNovo" class="card">
+    <button type="button" id="btnPuxarHelpdesk" class="btn-secondary">Puxar do chamado aberto</button>
+    <p class="hint hidden" id="f-clienteLabel"></p>
+
+    <!-- Suporte 2º Nível atende N2 e Acolhimento técnico: o tipo sugerido precisa ser confirmado -->
+    <div id="wrap-confirmaTipo" class="cond hidden">
+      <span class="hint" id="confirmaTipoTexto"></span>
+      <div class="seg-port" role="group" aria-label="Confirmar tipo">
+        <button type="button" class="seg-btn" data-confirma-tipo="n2">Chamado N2</button>
+        <button type="button" class="seg-btn" data-confirma-tipo="acolhimento">Acolhimento</button>
+      </div>
+    </div>
+
     <label>N° do chamado / OS
       <input type="text" id="f-numero" required autocomplete="off" placeholder="Ex: 12695181" />
     </label>

@@ -22,8 +22,9 @@ import {
   saveTurno
 } from "./dados.js";
 import { gerarRelatorio } from "./relatorio.js";
+import { urlDeChamado, lerChamadoDaAbaAtiva, sugerirTipo, categoriaDoGamma } from "./helpdesk.js";
 import { formatarDataLonga, todayKey } from "../../core/datas.js";
-import { fillSelect, montarTemplate } from "../../core/ui.js";
+import { fillSelect, montarTemplate, escaparHtml } from "../../core/ui.js";
 
 let CONFIG = null; // categorias, categoriasDP, statusList (cache local)
 
@@ -33,6 +34,7 @@ export async function montar(conteudo) {
   populateSelects();
   setupPortabilidadeNovo();
   setupFormNovo();
+  setupPuxarHelpdesk();
   setupBusca();
   setupTurnoInputs();
   setupRelatorio();
@@ -191,6 +193,8 @@ function setupFormNovo() {
       vinculadoNumero: document.getElementById("f-vinculado").value.trim(),
       status: port ? statusDerivadoPortabilidade(etapa) : statusEscolhido
     };
+    // O nome do cliente só vem do HelpDesk, e só vale para o número que foi puxado.
+    if (chamado.numero === numeroPuxado && clientePuxado) chamado.cliente = clientePuxado;
     if (port) {
       chamado.subtipoPortabilidade = subPortNovo;
       chamado.etapaPortabilidade = etapa;
@@ -208,12 +212,23 @@ function setupFormNovo() {
       return;
     }
 
+    if (tipoAConfirmar) {
+      feedback.textContent = "Confirme se é Chamado N2 ou Acolhimento.";
+      feedback.classList.add("err");
+      return;
+    }
+
     try {
       await addChamado(chamado);
       feedback.textContent = `Chamado ${chamado.numero} cadastrado.`;
       feedback.classList.add("ok");
-      abrirChamadoSeNecessario(chamado);
+      // Puxado do HelpDesk: o chamado já está aberto na aba, não precisa abrir de novo.
+      if (chamado.numero !== numeroPuxado) abrirChamadoSeNecessario(chamado);
+      numeroPuxado = "";
+      clientePuxado = "";
       form.reset();
+      document.getElementById("f-clienteLabel").classList.add("hidden");
+      document.getElementById("wrap-confirmaTipo").classList.add("hidden");
       document.getElementById("wrap-categoriaDP").classList.add("hidden");
       document.getElementById("wrap-vinculado").classList.add("hidden");
       selecionarSubPortNovo("Externa");
@@ -227,14 +242,97 @@ function setupFormNovo() {
 }
 
 // Abre o chamado no helpdesk automaticamente quando é N2 ou Acolhimento com status "Aberto".
-const HELPDESK_URL_BASE = "https://helpdesk.valenet.local:8443/Chamado";
-
 function abrirChamadoSeNecessario(chamado) {
   const tiposQueAbrem = ["n2", "acolhimento"];
   if (tiposQueAbrem.includes(chamado.tipo) && chamado.status === "Aberto") {
-    const url = `${HELPDESK_URL_BASE}/${chamado.numero}/View#/`;
-    chrome.tabs.create({ url });
+    chrome.tabs.create({ url: urlDeChamado(chamado.numero) });
   }
+}
+
+// ---------- puxar do HelpDesk ----------
+// Preenche o formulário com o chamado aberto na aba ativa. Só lê a página do HelpDesk.
+let numeroPuxado = "";
+let clientePuxado = "";
+let tipoAConfirmar = false;
+
+function setupPuxarHelpdesk() {
+  const wrapConfirma = document.getElementById("wrap-confirmaTipo");
+  const botoesConfirma = wrapConfirma.querySelectorAll("[data-confirma-tipo]");
+
+  function confirmarTipo(tipoId) {
+    tipoAConfirmar = false;
+    botoesConfirma.forEach((b) => b.classList.toggle("active", b.dataset.confirmaTipo === tipoId));
+    const select = document.getElementById("f-tipo");
+    select.value = TIPOS.find((t) => t.id === tipoId).label;
+    // Trocar o tipo recarrega a lista de categorias: a que já estava escolhida é mantida.
+    const categoria = document.getElementById("f-categoria").value;
+    select.dispatchEvent(new Event("change"));
+    document.getElementById("f-categoria").value = categoria;
+  }
+
+  botoesConfirma.forEach((btn) => btn.addEventListener("click", () => confirmarTipo(btn.dataset.confirmaTipo)));
+  // Trocou o número depois de puxar: o nome do cliente não vale mais.
+  document.getElementById("f-numero").addEventListener("input", (e) => {
+    document.getElementById("f-clienteLabel").classList.toggle("hidden", e.target.value.trim() !== numeroPuxado || !clientePuxado);
+  });
+  // Escolher o tipo direto no select também vale como confirmação.
+  document.getElementById("f-tipo").addEventListener("change", () => {
+    if (!tipoAConfirmar) return;
+    tipoAConfirmar = false;
+    botoesConfirma.forEach((b) => b.classList.remove("active"));
+  });
+
+  document.getElementById("btnPuxarHelpdesk").addEventListener("click", async () => {
+    const feedback = document.getElementById("feedbackNovo");
+    feedback.className = "feedback";
+    let dados;
+    try {
+      dados = await lerChamadoDaAbaAtiva();
+    } catch (err) {
+      dados = null;
+    }
+    if (!dados || !dados.numero) {
+      feedback.textContent = "Abra a tela de um chamado no HelpDesk e tente de novo.";
+      feedback.classList.add("err");
+      return;
+    }
+    if (await findChamado(dados.numero)) {
+      feedback.textContent = `O chamado ${dados.numero} já está no Gamma.`;
+      feedback.classList.add("err");
+      return;
+    }
+
+    numeroPuxado = dados.numero;
+    clientePuxado = dados.cliente;
+    document.getElementById("f-numero").value = dados.numero;
+    const clienteLabel = document.getElementById("f-clienteLabel");
+    clienteLabel.textContent = dados.cliente ? `Cliente: ${dados.cliente}` : "";
+    clienteLabel.classList.toggle("hidden", !dados.cliente);
+
+    const sugestao = sugerirTipo(dados);
+    wrapConfirma.classList.toggle("hidden", !sugestao);
+    if (sugestao) {
+      confirmarTipo(sugestao);
+      // a sugestão fica marcada, mas só vale depois que o agente confirmar
+      tipoAConfirmar = true;
+      document.getElementById("confirmaTipoTexto").textContent = dados.os
+        ? `OS ${dados.os} na solicitação: parece Acolhimento. Confirme o tipo.`
+        : "Sem OS na solicitação: parece Chamado N2. Confirme o tipo.";
+    }
+
+    // Categoria só entra se ela existir na lista do Gamma (com o tipo já escolhido).
+    const categoria = categoriaDoGamma(dados.categoria, CONFIG.categorias);
+    if (categoria) document.getElementById("f-categoria").value = categoria;
+
+    const avisos = [];
+    if (dados.categoria && !categoria) avisos.push(`categoria "${dados.categoria}" não está na lista do Gamma`);
+    if (!sugestao) avisos.push("escolha o tipo");
+    feedback.textContent =
+      `Chamado ${dados.numero} puxado do HelpDesk` +
+      (dados.statusHelpdesk ? ` (${dados.statusHelpdesk})` : "") +
+      (avisos.length ? `: ${avisos.join("; ")}.` : ".");
+    feedback.classList.add(avisos.length ? "err" : "ok");
+  });
 }
 
 // ---------- busca / atualizar ----------
@@ -394,7 +492,8 @@ function setupBusca() {
 function mostrarStatusBusca(chamado) {
   const data = chamado.dataPrevista ? ` (${formatarDataLonga(chamado.dataPrevista)})` : "";
   document.getElementById("rb-meta").textContent =
-    `${chamado.categoria} · ${chamado.canal || "-"} · status atual: ${chamado.status}${data}`;
+    `${chamado.categoria} · ${chamado.canal || "-"} · status atual: ${chamado.status}${data}` +
+    (chamado.cliente ? ` · ${chamado.cliente}` : "");
   document.getElementById("s-novoStatus").value = chamado.status;
   document.getElementById("s-dataPrevista").value = chamado.dataPrevista || "";
   document.getElementById("btnFinalizarOS").classList.toggle("hidden", chamado.status !== "OS");
@@ -439,6 +538,7 @@ async function renderDoDia() {
           <div class="cat">${[(TIPOS.find((t) => t.id === c.tipo) || {}).label, c.categoriaDP, c.categoria, c.etapaPortabilidade]
             .filter(Boolean)
             .join(" · ")}</div>
+          ${c.cliente ? `<div class="cat">${escaparHtml(c.cliente)}</div>` : ""}
         </div>
         <span class="badge ${statusClass(c.status)}">${c.status}</span>
       </div>`
