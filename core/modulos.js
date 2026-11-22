@@ -11,8 +11,9 @@
 //   backup  { padroes: {...} } chaves do storage que entram no backup geral, com o valor padrão
 
 import backlog from "../modules/backlog/module.js";
+import scripts from "../modules/scripts/module.js";
 
-export const MODULOS = [backlog];
+export const MODULOS = [backlog, scripts];
 
 export function moduloPorId(id) {
   return MODULOS.find((m) => m.id === id) || null;

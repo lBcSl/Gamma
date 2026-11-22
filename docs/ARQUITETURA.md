@@ -120,9 +120,15 @@ gamma/
 Cadastro e acompanhamento de chamados, chamados do dia, filas do turno, relatório diário, dashboard e backup.
 Tem regras próprias, como a Portabilidade (status derivado da etapa) e a Suspensão (categorias restritas).
 
-### 3.2 Scripts (planejado)
+### 3.2 Scripts (em construção)
 
 Expansor de texto: digitar um atalho (ex.: `/os`) num campo de texto gera o texto completo.
+
+Decisões (21/11/2026):
+- **Três modos:** expansão ao digitar `/atalho`; paleta com Ctrl+Shift+Espaço (buscar, clicar para inserir no cursor e deixar copiado); copiar pelo HUB. O Scripts **não tem aba no popup**: no dia a dia o acesso é pela paleta.
+- **Entrega em 3 partes:** (1) biblioteca, editor no HUB, variáveis e pacotes `.json` — **feito**; (2) paleta (`paleta.js` nos sites + `servico-paleta.js` no background) — **feito**; (3) expansor. Na fase de testes, paleta e expansor valem em todos os sites (`<all_urls>`); depois filtramos.
+- **Dados:** os padrões ficam no código (`modules/scripts/padroes.js`) e as mudanças do usuário ficam à parte (`scriptsAjustesPadrao`), então uma versão nova não apaga o que foi editado. Pessoais em `scriptsPessoais`; pastas em `scriptsPastas` (padrão: Chamado, Ordem de Serviço, Finalização, Processos).
+- **Variáveis:** `{saudacao}`, `{data}`, `{hora}`, `{agente}` (nome pedido no primeiro acesso, guardado no perfil do núcleo), `{numero}` e `{cliente}` (do chamado aberto no HelpDesk; sem chamado, são perguntados), `{campo:Rótulo}`, `{opcao:A|B}` e `{cursor}`.
 
 - **Presets padrão** já vêm com a extensão, e cada usuário pode criar os **seus próprios**.
 - **Variáveis e campos:** `{data_hoje}`, campos de escolha, etc.

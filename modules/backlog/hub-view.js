@@ -4,7 +4,11 @@
 import {
   TIPOS,
   STATUS_COM_DATA,
-  isFinalizado,
+  chamadoFinalizado,
+  finalizadoPorInatividade,
+  diaFinalizacaoInativo,
+  getInativosParaAvisar,
+  marcarInativosAvisados,
   isPortabilidade,
   etapasPortabilidade,
   statusDerivadoPortabilidade,
@@ -29,6 +33,7 @@ export async function montar(conteudo) {
   setupTabs();
   setupModal();
   setupViewToggle();
+  setupAvisoInativos();
   await popularFiltros();
   setupFiltros();
   await renderBacklog();
@@ -48,8 +53,8 @@ function setupTabs() {
   });
 }
 
-function isAberto(status) {
-  return !isFinalizado(status);
+function isAberto(c) {
+  return !chamadoFinalizado(c);
 }
 
 // Dias de calendário desde a data: aberto ontem às 18h já conta 1 dia hoje às 9h.
@@ -75,7 +80,7 @@ function formatarDias(dias) {
 // - OS/Atualizado sem data marcada desde ontem;
 // - OS/Atualizado com a data marcada já vencida.
 function motivoAtencao(c) {
-  if (!isAberto(c.status)) return "";
+  if (!isAberto(c)) return "";
   const parado = diasParado(c.updatedAt) >= 1;
   const desde = formatarDataCurta(todayKey(new Date(c.updatedAt)));
   if (!isPortabilidade(c) && STATUS_COM_DATA.includes(c.status)) {
@@ -91,7 +96,7 @@ function motivoAtencao(c) {
 
 // Coluna "Parado há": finalizado não conta dias, mostra quando foi finalizado.
 function paradoHtml(c) {
-  if (isFinalizado(c.status)) {
+  if (chamadoFinalizado(c)) {
     return `<span class="finalizado-em">Finalizado ${formatarDataCurta(diaFinalizacao(c))}</span>`;
   }
   const texto = formatarDias(diasParado(c.updatedAt));
@@ -105,16 +110,23 @@ function categoriaExibida(c) {
   return "-";
 }
 
-// Linha embaixo do status: etapa da Portabilidade ou data marcada de OS/Atualizado.
+// Linha embaixo do status: etapa da Portabilidade, data marcada de OS/Atualizado,
+// destino do Encaminhado ou quando o Inativo encerra.
 function detalheStatus(c) {
   // Portabilidade encerrada segue o formato padrão, sem etapa nem Janela.
   if (isPortabilidade(c)) {
-    if (isFinalizado(c.status)) return "";
+    if (chamadoFinalizado(c)) return "";
     const partes = [c.subtipoPortabilidade || "Externa", c.etapaPortabilidade || "sem etapa"];
     const janela = c.dataJanela ? ` ${formatarDataCurta(c.dataJanela)}` : "";
     return partes.join(" · ") + janela;
   }
   if (c.status === "OS Finalizada") return `Finalizada em ${formatarDataCurta(todayKey(new Date(c.updatedAt)))}`;
+  if (c.status === "Encaminhado") return c.encaminhadoPara ? `Para ${escaparHtml(c.encaminhadoPara)}` : "";
+  if (c.status === "Inativo") {
+    return finalizadoPorInatividade(c)
+      ? "Finalizado por inatividade"
+      : `Finaliza em ${formatarDataCurta(diaFinalizacaoInativo(c))}`;
+  }
   if (!STATUS_COM_DATA.includes(c.status)) return "";
   if (!c.dataPrevista) return "Sem data";
   const rotulo = c.status === "OS" ? "Agendada" : "Data prevista: ";
@@ -210,14 +222,37 @@ function setupViewToggle() {
   document.getElementById("mostrarTodos").addEventListener("change", renderBacklog);
 }
 
-// Um chamado finalizado "hoje" (última atualização de status foi hoje) sempre aparece;
+// Um chamado finalizado hoje (inclusive Inativo que venceu hoje) sempre aparece;
 // finalizado em outro dia só aparece no Backlog geral se "Mostrar todos" estiver marcado.
 function foiFinalizadoHoje(c) {
-  return todayKey(new Date(c.updatedAt)) === todayKey();
+  return diaFinalizacao(c) === todayKey();
+}
+
+// ---------- aviso de Inativos finalizados ----------
+// Inativo passa a contar como finalizado no dia seguinte, sem ninguém mexer nele:
+// o aviso deixa o agente ciente. Some depois do "Ok, entendi" e só volta com novos.
+function setupAvisoInativos() {
+  document.getElementById("btnAvisoInativos").addEventListener("click", async () => {
+    await marcarInativosAvisados();
+    document.getElementById("avisoInativos").classList.add("hidden");
+  });
+}
+
+async function renderAvisoInativos() {
+  const novos = await getInativosParaAvisar();
+  const aviso = document.getElementById("avisoInativos");
+  aviso.classList.toggle("hidden", novos.length === 0);
+  if (novos.length === 0) return;
+  const numeros = novos.map((c) => c.numero).join(", ");
+  document.getElementById("avisoInativosTexto").textContent =
+    novos.length === 1
+      ? `O chamado ${numeros} ficou Inativo e agora consta como finalizado.`
+      : `${novos.length} chamados ficaram Inativos e agora constam como finalizados: ${numeros}.`;
 }
 
 // ---------- backlog geral ----------
 async function renderBacklog() {
+  renderAvisoInativos();
   const data = await getData();
   const tipo = document.getElementById("filtroTipo").value;
   const status = document.getElementById("filtroStatus").value;
@@ -234,16 +269,19 @@ async function renderBacklog() {
     abertos = data.chamados;
   } else {
     // Backlog geral (padrão): esconde finalizados de dias anteriores.
-    abertos = data.chamados.filter((c) => !(isFinalizado(c.status) && !foiFinalizadoHoje(c)));
+    abertos = data.chamados.filter((c) => !(chamadoFinalizado(c) && !foiFinalizadoHoje(c)));
   }
 
   if (tipo) abertos = abertos.filter((c) => c.tipo === tipo);
   if (status) abertos = abertos.filter((c) => c.status === status);
   if (canal) abertos = abertos.filter((c) => c.canal === canal);
   if (busca) {
+    // "13.005" também acha 13005640: o número é guardado sem pontos.
+    const buscaNumero = /^[\d.\s-]+$/.test(busca) ? busca.replace(/\D/g, "") : "";
     abertos = abertos.filter(
       (c) =>
         c.numero.toLowerCase().includes(busca) ||
+        (buscaNumero && c.numero.includes(buscaNumero)) ||
         (c.categoria || "").toLowerCase().includes(busca) ||
         (c.categoriaDP || "").toLowerCase().includes(busca) ||
         (c.cliente || "").toLowerCase().includes(busca)
@@ -253,7 +291,7 @@ async function renderBacklog() {
   abertos.sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt));
 
   const total = data.chamados.length;
-  const totalAbertos = data.chamados.filter((c) => isAberto(c.status)).length;
+  const totalAbertos = data.chamados.filter((c) => isAberto(c)).length;
   const totalFinalizados = total - totalAbertos;
   const totalSemAtualizacao = data.chamados.filter(motivoAtencao).length;
 
@@ -308,7 +346,7 @@ function renderBloco(bodyId, emptyId, chamados, linhaHtml) {
 
 async function renderAdormecidos() {
   const data = await getData();
-  const abertos = data.chamados.filter((c) => isAberto(c.status));
+  const abertos = data.chamados.filter((c) => isAberto(c));
   const tipoLabel = (c) => (TIPOS.find((t) => t.id === c.tipo) || {}).label || c.tipo;
 
   // 1) OS e Atualizado, com ou sem data
@@ -494,6 +532,7 @@ async function abrirModalEdicao(numero) {
   document.getElementById("m-vinculado").value = chamado.vinculadoNumero || "";
   document.getElementById("m-status").value = chamado.status;
   document.getElementById("m-dataPrevista").value = chamado.dataPrevista || "";
+  document.getElementById("m-encaminhadoPara").value = chamado.encaminhadoPara || "";
   document.getElementById("m-dataJanela").value = chamado.dataJanela || "";
   selecionarSubPortModal(chamado.subtipoPortabilidade || "Externa");
   preencherEtapasModal(chamado.etapaPortabilidade);
@@ -538,6 +577,9 @@ function aplicarUIDataModal() {
   document.getElementById("m-wrap-dataPrevista").classList.toggle("hidden", !mostrar);
   document.getElementById("m-dataPrevistaLabel").textContent =
     status === "OS" ? "Data do agendamento" : "Data do novo contato";
+  document
+    .getElementById("m-wrap-encaminhado")
+    .classList.toggle("hidden", isPortabilidadeModal() || status !== "Encaminhado");
 }
 
 function selecionarSubPortModal(sub) {
@@ -653,6 +695,10 @@ function setupModal() {
       dataPrevista:
         !port && STATUS_COM_DATA.includes(statusEscolhido)
           ? document.getElementById("m-dataPrevista").value
+          : "",
+      encaminhadoPara:
+        !port && statusEscolhido === "Encaminhado"
+          ? document.getElementById("m-encaminhadoPara").value.trim()
           : ""
     };
     if (port) {

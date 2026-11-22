@@ -16,6 +16,31 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["storage", "downloads", "clipboardWrite", "tabs", "scripting"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://helpdesk.valenet.local/*"],
+      "js": ["modules/backlog/cartao-helpdesk.js"],
+      "all_frames": true,
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["modules/scripts/paleta.js"],
+      "all_frames": true,
+      "match_about_blank": true,
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "abrir-paleta": {
+      "suggested_key": { "default": "Ctrl+Shift+Space", "mac": "MacCtrl+Shift+Space" },
+      "description": "Abrir a paleta de scripts"
+    }
+  },
+  "permissions": ["storage", "downloads", "clipboardWrite", "tabs", "scripting", "activeTab"],
   "host_permissions": ["*://helpdesk.valenet.local/*", "*://helpdesk.valenet.local:8443/*"]
 }

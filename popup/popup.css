@@ -432,3 +432,6 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); }
 .drop:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
 .drop strong { font-size: 14px; color: var(--ink); }
 .drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+.toggle { flex-direction: row; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: var(--ink); }
+.toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--ink); cursor: pointer; }

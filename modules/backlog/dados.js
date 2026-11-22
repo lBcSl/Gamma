@@ -3,7 +3,7 @@
 // A UI do módulo nunca fala com o chrome.storage diretamente, só com estas funções.
 
 import { ler, gravar } from "../../core/storage.js";
-import { todayKey } from "../../core/datas.js";
+import { todayKey, parseDataLocal } from "../../core/datas.js";
 
 // Sub-tipos de Departamento sem campo de categoria própria - a informação já
 // está completa só com o sub-tipo (ex: "12683256 - Reincidência - OS.").
@@ -16,6 +16,8 @@ export const DEFAULTS = {
     "Acesso Lento",
     "Acesso Parado",
     "AcolhTec OS Mercantil",
+    "Avaliação Técnica",
+    "Análise de Viabilidade",
     "CFS - Batimento CDA",
     "CFS - Extravio",
     "Configuração Especial",
@@ -24,6 +26,7 @@ export const DEFAULTS = {
     "Falha em Jogos Online",
     "Falha em Sites Específicos",
     "Informações",
+    "informação de OS",
     "Migração de rede",
     "Pedido de Portabilidade",
     "Reincidência",
@@ -59,11 +62,41 @@ export const DEFAULTS = {
   turnos: {} // { "2026-08-07": { n2Inicio, n2Fim, ascInicio, ascFim } }
 };
 
-// Status que encerram o chamado. "OS Finalizada" tem o mesmo peso de "Finalizado".
-export const STATUS_FINALIZADOS = ["Finalizado", "OS Finalizada"];
+// Status que encerram o chamado. "OS Finalizada" e "Encaminhado" têm o mesmo peso de "Finalizado".
+export const STATUS_FINALIZADOS = ["Finalizado", "OS Finalizada", "Encaminhado"];
 
+// Só pelo nome do status. Para saber se um chamado está encerrado, use chamadoFinalizado(c),
+// que também considera o Inativo vencido.
 export function isFinalizado(status) {
   return STATUS_FINALIZADOS.includes(status);
+}
+
+// ---------- Inativo ----------
+// Inativo = cliente do WhatsApp que não respondeu. O chamado continua aberto no dia
+// em que ficou Inativo e passa a contar como finalizado a partir do dia seguinte.
+// O status continua "Inativo" (é assim que sai no relatório).
+function diaQueFicouInativo(c) {
+  const entrada = [...(c.historico || [])].reverse().find((h) => h.status === "Inativo");
+  return todayKey(new Date(entrada ? entrada.em : c.updatedAt));
+}
+
+function diaSeguinte(diaKey) {
+  const d = parseDataLocal(diaKey);
+  d.setDate(d.getDate() + 1);
+  return todayKey(d);
+}
+
+// Dia em que o Inativo passa a contar como finalizado ("" se o chamado não está Inativo).
+export function diaFinalizacaoInativo(c) {
+  return c.status === "Inativo" ? diaSeguinte(diaQueFicouInativo(c)) : "";
+}
+
+export function finalizadoPorInatividade(c) {
+  return c.status === "Inativo" && diaFinalizacaoInativo(c) <= todayKey();
+}
+
+export function chamadoFinalizado(c) {
+  return isFinalizado(c.status) || finalizadoPorInatividade(c);
 }
 
 export const TIPOS = [
@@ -111,6 +144,12 @@ export function isPortabilidade(c) {
 // Status que aceitam uma data: OS = agendamento, Atualizado = novo contato com o cliente.
 export const STATUS_COM_DATA = ["OS", "Atualizado"];
 
+// ---------- número do chamado ----------
+// O número é guardado só com dígitos: "13.005.640" e "13005640" são o mesmo chamado.
+export function normalizarNumero(numero) {
+  return String(numero || "").replace(/\D/g, "");
+}
+
 // Ids de tipo antigos que foram renomeados. Chamados salvos (ou backups importados)
 // com o id antigo são convertidos na primeira leitura.
 const TIPOS_RENOMEADOS = { reincidencia: "departamento" };
@@ -126,17 +165,39 @@ export async function getData() {
     data.statusList.splice(anterior + 1, 0, s);
     migrou = true;
   });
+  // Mesma regra para categorias: lista salva antes de uma categoria nova existir.
+  if (Array.isArray(data.categorias)) {
+    DEFAULTS.categorias.forEach((cat, i) => {
+      if (data.categorias.includes(cat)) return;
+      const anterior = data.categorias.indexOf(DEFAULTS.categorias[i - 1]);
+      data.categorias.splice(anterior + 1, 0, cat);
+      migrou = true;
+    });
+  }
   data.chamados.forEach((c) => {
     if (TIPOS_RENOMEADOS[c.tipo]) {
       c.tipo = TIPOS_RENOMEADOS[c.tipo];
       migrou = true;
     }
+    // Números salvos com pontos (digitados à mão antes da padronização) passam a ter só
+    // dígitos - a não ser que já exista outro chamado com o mesmo número sem pontos.
+    const soDigitos = normalizarNumero(c.numero);
+    if (soDigitos && soDigitos !== c.numero && !data.chamados.some((o) => o.numero === soDigitos)) {
+      c.numero = soDigitos;
+      migrou = true;
+    }
+    if (c.vinculadoNumero && normalizarNumero(c.vinculadoNumero) !== c.vinculadoNumero) {
+      c.vinculadoNumero = normalizarNumero(c.vinculadoNumero);
+      migrou = true;
+    }
   });
-  if (migrou) await gravar({ chamados: data.chamados, statusList: data.statusList });
+  if (migrou) await gravar({ chamados: data.chamados, statusList: data.statusList, categorias: data.categorias });
   return data;
 }
 
-export async function addChamado(chamado) {
+export async function addChamado(dadosChamado) {
+  const chamado = { ...dadosChamado, numero: normalizarNumero(dadosChamado.numero) };
+  if (chamado.vinculadoNumero) chamado.vinculadoNumero = normalizarNumero(chamado.vinculadoNumero);
   const data = await getData();
   const now = new Date().toISOString();
   const existing = data.chamados.find((c) => c.numero === chamado.numero);
@@ -161,15 +222,18 @@ function entradaHistorico(c, em) {
   return entrada;
 }
 
-// dataPrevista só fica salva enquanto o status for OS ou Atualizado.
-export async function updateChamadoStatus(numero, novoStatus, dataPrevista = "") {
+// dataPrevista só fica salva enquanto o status for OS ou Atualizado;
+// encaminhadoPara, enquanto o status for Encaminhado.
+export async function updateChamadoStatus(numero, novoStatus, dataPrevista = "", encaminhadoPara = "") {
   return updateChamado(numero, {
     status: novoStatus,
-    dataPrevista: STATUS_COM_DATA.includes(novoStatus) ? dataPrevista : ""
+    dataPrevista: STATUS_COM_DATA.includes(novoStatus) ? dataPrevista : "",
+    encaminhadoPara: novoStatus === "Encaminhado" ? encaminhadoPara.trim() : ""
   });
 }
 
 export async function updateChamado(numero, updates) {
+  if (updates.vinculadoNumero) updates = { ...updates, vinculadoNumero: normalizarNumero(updates.vinculadoNumero) };
   const data = await getData();
   const idx = data.chamados.findIndex((c) => c.numero === numero);
   if (idx === -1) throw new Error("Chamado não encontrado.");
@@ -217,7 +281,8 @@ export async function deleteChamado(numero) {
 
 export async function findChamado(numero) {
   const data = await getData();
-  return data.chamados.find((c) => c.numero === numero) || null;
+  const alvo = normalizarNumero(numero);
+  return data.chamados.find((c) => c.numero === alvo) || null;
 }
 
 export async function getChamadosDoDia(diaKey = todayKey()) {
@@ -228,6 +293,7 @@ export async function getChamadosDoDia(diaKey = todayKey()) {
 // Dia (AAAA-MM-DD) em que o chamado foi finalizado; "" se ele não está finalizado.
 // Usa a última entrada finalizada do histórico (o chamado pode ter sido reaberto antes).
 export function diaFinalizacao(c) {
+  if (c.status === "Inativo") return finalizadoPorInatividade(c) ? diaFinalizacaoInativo(c) : "";
   if (!isFinalizado(c.status)) return "";
   const entrada = [...(c.historico || [])].reverse().find((h) => isFinalizado(h.status));
   return todayKey(new Date(entrada ? entrada.em : c.updatedAt));
@@ -259,4 +325,50 @@ export async function getTurno(diaKey) {
 export function statusClass(status) {
   const slug = (status || "").toLowerCase().normalize("NFD").replace(/[^a-z]/g, "");
   return `st-${slug}`;
+}
+
+// ---------- aviso de Inativos finalizados (HUB) ----------
+// Os chamados já avisados ficam guardados fora do backup: é só um lembrete de tela.
+// A chave inclui o dia, porque o mesmo chamado pode ficar Inativo de novo outro dia.
+function chaveAvisoInativo(c) {
+  return `${c.numero}|${diaFinalizacaoInativo(c)}`;
+}
+
+export async function getInativosParaAvisar() {
+  const data = await getData();
+  const { inativosAvisados } = await ler({ inativosAvisados: [] });
+  return data.chamados.filter((c) => finalizadoPorInatividade(c) && !inativosAvisados.includes(chaveAvisoInativo(c)));
+}
+
+// Guarda só os que ainda estão Inativos, para a lista não crescer sem fim.
+export async function marcarInativosAvisados() {
+  const data = await getData();
+  await gravar({ inativosAvisados: data.chamados.filter(finalizadoPorInatividade).map(chaveAvisoInativo) });
+}
+
+// ---------- cartão do HelpDesk ----------
+// Preferências do cartão que aparece na tela do HelpDesk. Ficam fora do backup:
+// são ajustes desta máquina, não dados de chamados.
+const LIMITE_IGNORADOS = 300;
+
+export async function cartaoHelpdeskAtivo() {
+  const { cartaoHelpdeskAtivo } = await ler({ cartaoHelpdeskAtivo: true });
+  return cartaoHelpdeskAtivo !== false;
+}
+
+export async function definirCartaoHelpdeskAtivo(ativo) {
+  await gravar({ cartaoHelpdeskAtivo: !!ativo });
+}
+
+// "Agora não" num chamado: o cartão não aparece mais para ele.
+export async function ignorarNoCartao(numero) {
+  const { cartaoIgnorados } = await ler({ cartaoIgnorados: [] });
+  const alvo = normalizarNumero(numero);
+  const lista = [alvo, ...cartaoIgnorados.filter((n) => n !== alvo)].slice(0, LIMITE_IGNORADOS);
+  await gravar({ cartaoIgnorados: lista });
+}
+
+export async function ignoradoNoCartao(numero) {
+  const { cartaoIgnorados } = await ler({ cartaoIgnorados: [] });
+  return cartaoIgnorados.includes(normalizarNumero(numero));
 }

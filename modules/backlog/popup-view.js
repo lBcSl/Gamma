@@ -4,7 +4,7 @@
 import {
   TIPOS,
   STATUS_COM_DATA,
-  isFinalizado,
+  chamadoFinalizado,
   isPortabilidade,
   etapasPortabilidade,
   statusDerivadoPortabilidade,
@@ -19,7 +19,8 @@ import {
   getChamadosDoDia,
   getChamadosDoRelatorio,
   getTurno,
-  saveTurno
+  saveTurno,
+  normalizarNumero
 } from "./dados.js";
 import { gerarRelatorio } from "./relatorio.js";
 import { urlDeChamado, lerChamadoDaAbaAtiva, sugerirTipo, categoriaDoGamma } from "./helpdesk.js";
@@ -29,16 +30,25 @@ import { fillSelect, montarTemplate, escaparHtml } from "../../core/ui.js";
 let CONFIG = null; // categorias, categoriasDP, statusList (cache local)
 
 export async function montar(conteudo) {
-  await montarTemplate(new URL("./popup-view.html", import.meta.url), conteudo);
+  const abas = await montarTemplate(new URL("./popup-view.html", import.meta.url), conteudo, { acumular: true });
   CONFIG = await getData();
   populateSelects();
   setupPortabilidadeNovo();
   setupFormNovo();
   setupPuxarHelpdesk();
   setupBusca();
+  // Número colado com pontos ("13.005.640") já fica só com os dígitos no campo.
+  ["f-numero", "f-vinculado", "s-numero"].forEach((id) => {
+    const campo = document.getElementById(id);
+    campo.addEventListener("input", () => {
+      const limpo = normalizarNumero(campo.value);
+      if (limpo !== campo.value) campo.value = limpo;
+    });
+  });
   setupTurnoInputs();
   setupRelatorio();
   await renderDoDia();
+  return abas;
 }
 
 export async function aoMostrarAba(aba) {
@@ -127,9 +137,11 @@ function labelDataPrevista(status) {
 
 function aplicarUIDataPrevista() {
   const status = document.getElementById("f-status").value;
-  const mostrar = !isPortabilidadeNovo() && STATUS_COM_DATA.includes(status);
+  const port = isPortabilidadeNovo();
+  const mostrar = !port && STATUS_COM_DATA.includes(status);
   document.getElementById("wrap-dataPrevista").classList.toggle("hidden", !mostrar);
   document.getElementById("f-dataPrevistaLabel").textContent = labelDataPrevista(status);
+  document.getElementById("wrap-encaminhado").classList.toggle("hidden", port || status !== "Encaminhado");
 }
 
 function selecionarSubPortNovo(sub) {
@@ -185,7 +197,7 @@ function setupFormNovo() {
     const statusEscolhido = document.getElementById("f-status").value;
     const etapa = document.getElementById("f-etapa").value;
     const chamado = {
-      numero: document.getElementById("f-numero").value.trim(),
+      numero: normalizarNumero(document.getElementById("f-numero").value),
       tipo: tipoIdFromLabel(document.getElementById("f-tipo").value),
       categoriaDP: document.getElementById("f-categoriaDP").value,
       categoria: port ? "" : document.getElementById("f-categoria").value,
@@ -201,6 +213,8 @@ function setupFormNovo() {
       chamado.dataJanela = document.getElementById("f-dataJanela").value;
     } else if (STATUS_COM_DATA.includes(statusEscolhido)) {
       chamado.dataPrevista = document.getElementById("f-dataPrevista").value;
+    } else if (statusEscolhido === "Encaminhado") {
+      chamado.encaminhadoPara = document.getElementById("f-encaminhadoPara").value.trim();
     }
 
     const categoriaObrigatoria = document.getElementById("f-categoria").required;
@@ -208,12 +222,6 @@ function setupFormNovo() {
 
     if (!chamado.numero || !chamado.tipo || faltaCategoria || !chamado.status) {
       feedback.textContent = "Preencha número, tipo, categoria e status.";
-      feedback.classList.add("err");
-      return;
-    }
-
-    if (tipoAConfirmar) {
-      feedback.textContent = "Confirme se é Chamado N2 ou Acolhimento.";
       feedback.classList.add("err");
       return;
     }
@@ -253,14 +261,19 @@ function abrirChamadoSeNecessario(chamado) {
 // Preenche o formulário com o chamado aberto na aba ativa. Só lê a página do HelpDesk.
 let numeroPuxado = "";
 let clientePuxado = "";
-let tipoAConfirmar = false;
+
+// Por que não deu para puxar (ver lerChamadoDaAbaAtiva).
+const MENSAGENS_PUXAR = {
+  aba: "Esta aba não é do HelpDesk. Vá até a aba do chamado e tente de novo.",
+  chamado: "Não achei um chamado nesta tela do HelpDesk. Abra o chamado (em aba própria ou na janela rápida) e tente de novo.",
+  leitura: "Não consegui ler a página do HelpDesk. Recarregue a página e tente de novo."
+};
 
 function setupPuxarHelpdesk() {
   const wrapConfirma = document.getElementById("wrap-confirmaTipo");
   const botoesConfirma = wrapConfirma.querySelectorAll("[data-confirma-tipo]");
 
-  function confirmarTipo(tipoId) {
-    tipoAConfirmar = false;
+  function escolherTipo(tipoId) {
     botoesConfirma.forEach((b) => b.classList.toggle("active", b.dataset.confirmaTipo === tipoId));
     const select = document.getElementById("f-tipo");
     select.value = TIPOS.find((t) => t.id === tipoId).label;
@@ -270,32 +283,32 @@ function setupPuxarHelpdesk() {
     document.getElementById("f-categoria").value = categoria;
   }
 
-  botoesConfirma.forEach((btn) => btn.addEventListener("click", () => confirmarTipo(btn.dataset.confirmaTipo)));
+  botoesConfirma.forEach((btn) => btn.addEventListener("click", () => escolherTipo(btn.dataset.confirmaTipo)));
   // Trocou o número depois de puxar: o nome do cliente não vale mais.
   document.getElementById("f-numero").addEventListener("input", (e) => {
-    document.getElementById("f-clienteLabel").classList.toggle("hidden", e.target.value.trim() !== numeroPuxado || !clientePuxado);
+    document.getElementById("f-clienteLabel").classList.toggle("hidden", normalizarNumero(e.target.value) !== numeroPuxado || !clientePuxado);
   });
-  // Escolher o tipo direto no select também vale como confirmação.
-  document.getElementById("f-tipo").addEventListener("change", () => {
-    if (!tipoAConfirmar) return;
-    tipoAConfirmar = false;
-    botoesConfirma.forEach((b) => b.classList.remove("active"));
+  // Escolher o tipo direto no select: os botões acompanham.
+  document.getElementById("f-tipo").addEventListener("change", (e) => {
+    const tipoId = tipoIdFromLabel(e.target.value);
+    botoesConfirma.forEach((b) => b.classList.toggle("active", b.dataset.confirmaTipo === tipoId));
   });
 
   document.getElementById("btnPuxarHelpdesk").addEventListener("click", async () => {
     const feedback = document.getElementById("feedbackNovo");
     feedback.className = "feedback";
-    let dados;
+    let leitura;
     try {
-      dados = await lerChamadoDaAbaAtiva();
+      leitura = await lerChamadoDaAbaAtiva();
     } catch (err) {
-      dados = null;
+      leitura = { erro: "leitura", mensagem: err.message };
     }
-    if (!dados || !dados.numero) {
-      feedback.textContent = "Abra a tela de um chamado no HelpDesk e tente de novo.";
+    if (leitura.erro) {
+      feedback.textContent = MENSAGENS_PUXAR[leitura.erro] + (leitura.mensagem ? ` (${leitura.mensagem})` : "");
       feedback.classList.add("err");
       return;
     }
+    const dados = leitura.dados;
     if (await findChamado(dados.numero)) {
       feedback.textContent = `O chamado ${dados.numero} já está no Gamma.`;
       feedback.classList.add("err");
@@ -312,12 +325,11 @@ function setupPuxarHelpdesk() {
     const sugestao = sugerirTipo(dados);
     wrapConfirma.classList.toggle("hidden", !sugestao);
     if (sugestao) {
-      confirmarTipo(sugestao);
-      // a sugestão fica marcada, mas só vale depois que o agente confirmar
-      tipoAConfirmar = true;
+      // A sugestão já vale ao salvar; se estiver errada, é só trocar antes.
+      escolherTipo(sugestao);
       document.getElementById("confirmaTipoTexto").textContent = dados.os
-        ? `OS ${dados.os} na solicitação: parece Acolhimento. Confirme o tipo.`
-        : "Sem OS na solicitação: parece Chamado N2. Confirme o tipo.";
+        ? `OS ${dados.os} na solicitação: parece Acolhimento. Troque se não for.`
+        : "Sem OS na solicitação: parece Chamado N2. Troque se não for.";
     }
 
     // Categoria só entra se ela existir na lista do Gamma (com o tipo já escolhido).
@@ -416,9 +428,10 @@ function setupBusca() {
     const numero = box.dataset.numero;
     const novoStatus = document.getElementById("s-novoStatus").value;
     const dataPrevista = document.getElementById("s-dataPrevista").value;
+    const encaminhadoPara = document.getElementById("s-encaminhadoPara").value;
     const feedback = document.getElementById("feedbackBusca");
     try {
-      const chamado = await updateChamadoStatus(numero, novoStatus, dataPrevista);
+      const chamado = await updateChamadoStatus(numero, novoStatus, dataPrevista, encaminhadoPara);
       mostrarStatusBusca(chamado);
       feedback.textContent = `Status de ${numero} atualizado para "${novoStatus}".`;
       feedback.className = "feedback ok";
@@ -491,11 +504,13 @@ function setupBusca() {
 // "Finalizar OS" só aparece enquanto o chamado está em OS.
 function mostrarStatusBusca(chamado) {
   const data = chamado.dataPrevista ? ` (${formatarDataLonga(chamado.dataPrevista)})` : "";
+  const destino = chamado.encaminhadoPara ? ` para ${chamado.encaminhadoPara}` : "";
   document.getElementById("rb-meta").textContent =
-    `${chamado.categoria} · ${chamado.canal || "-"} · status atual: ${chamado.status}${data}` +
+    `${chamado.categoria} · ${chamado.canal || "-"} · status atual: ${chamado.status}${data}${destino}` +
     (chamado.cliente ? ` · ${chamado.cliente}` : "");
   document.getElementById("s-novoStatus").value = chamado.status;
   document.getElementById("s-dataPrevista").value = chamado.dataPrevista || "";
+  document.getElementById("s-encaminhadoPara").value = chamado.encaminhadoPara || "";
   document.getElementById("btnFinalizarOS").classList.toggle("hidden", chamado.status !== "OS");
   aplicarUIDataBusca();
 }
@@ -506,6 +521,7 @@ function aplicarUIDataBusca() {
     .getElementById("wrap-dataPrevistaBusca")
     .classList.toggle("hidden", !STATUS_COM_DATA.includes(status));
   document.getElementById("s-dataPrevistaLabel").textContent = labelDataPrevista(status);
+  document.getElementById("wrap-encaminhadoBusca").classList.toggle("hidden", status !== "Encaminhado");
 }
 
 // ---------- do dia ----------
@@ -516,7 +532,7 @@ async function renderDoDia() {
   const chamados = await getChamadosDoDia();
   const counters = document.getElementById("counters");
   const total = chamados.length;
-  const finalizados = chamados.filter((c) => isFinalizado(c.status)).length;
+  const finalizados = chamados.filter(chamadoFinalizado).length;
   const abertos = total - finalizados;
   counters.innerHTML = `
     <div class="counter"><div class="n">${total}</div><div class="l">Total hoje</div></div>

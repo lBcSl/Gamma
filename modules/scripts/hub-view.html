@@ -1,0 +1,161 @@
+<!-- Tela do Scripts no HUB. As abas (data-slot) vão para a barra do topo; o resto, para o conteúdo. -->
+<nav class="tabs" data-slot="abas-topo" aria-label="Visões">
+  <button class="tab-btn active" data-view="scripts">Scripts</button>
+  <button class="tab-btn" data-view="sc-config">Pastas e configurações</button>
+</nav>
+
+<div class="page-head">
+  <p class="eyebrow">Respostas prontas</p>
+  <h1>Scripts</h1>
+</div>
+
+<!-- BIBLIOTECA + EDITOR -->
+<section class="view active" id="view-scripts">
+  <div class="sc-layout">
+
+    <div class="card sc-lista-card">
+      <div class="card-head">
+        <div>
+          <h2>Biblioteca</h2>
+          <p class="sub" id="scContagem"></p>
+        </div>
+        <button type="button" class="btn-primary sc-btn-novo" id="scNovo">+ Novo</button>
+      </div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="text" id="scBusca" placeholder="Buscar por atalho, nome ou texto..." aria-label="Buscar scripts" />
+      </div>
+      <div class="sc-lista" id="scLista"></div>
+    </div>
+
+    <form class="card sc-editor" id="scEditor" autocomplete="off">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow" id="scOrigem">Novo script</p>
+          <h2 id="scTituloEditor">Novo script</h2>
+        </div>
+        <span class="badge sc-badge-mod hidden" id="scBadgeMod">Modificado</span>
+      </div>
+
+      <div class="sc-row">
+        <label class="sc-campo">Nome
+          <input type="text" id="scTitulo" maxlength="80" placeholder="Ex: Saudação inicial" />
+        </label>
+        <label class="sc-campo sc-campo-atalho">Atalho
+          <span class="sc-atalho">
+            <span class="sc-barra" aria-hidden="true">/</span>
+            <input type="text" id="scAtalho" maxlength="24" placeholder="bd" />
+          </span>
+        </label>
+        <label class="sc-campo">Pasta
+          <select id="scPasta"></select>
+        </label>
+      </div>
+
+      <label class="sc-campo">Texto
+        <textarea id="scTexto" rows="7" placeholder="{saudacao}! Meu nome é {agente}..."></textarea>
+      </label>
+
+      <div class="sc-vars">
+        <span class="sc-vars-titulo">Inserir variável</span>
+        <div class="sc-chips" id="scChips"></div>
+      </div>
+
+      <div class="sc-previa-wrap">
+        <span class="sc-vars-titulo">Prévia</span>
+        <div class="sc-previa" id="scPrevia"></div>
+      </div>
+
+      <div class="sc-acoes">
+        <button type="submit" class="btn-primary" id="scSalvar">Salvar</button>
+        <button type="button" class="btn-danger" id="scUsar">Copiar</button>
+        <button type="button" class="btn-danger hidden" id="scRestaurar">Restaurar original</button>
+        <button type="button" class="btn-danger hidden" id="scExcluir">Excluir</button>
+      </div>
+      <p class="feedback" id="scFeedback"></p>
+    </form>
+
+  </div>
+</section>
+
+<!-- PASTAS E CONFIGURAÇÕES -->
+<section class="view" id="view-sc-config">
+  <div class="sc-config">
+
+    <div class="card">
+      <div>
+        <h2>Seu nome</h2>
+        <p class="sub">Entra no lugar de {agente} nos scripts.</p>
+      </div>
+      <form class="sc-inline" id="scFormNome">
+        <input type="text" id="scNome" maxlength="60" autocomplete="off" aria-label="Seu nome" />
+        <button type="submit" class="btn-primary">Salvar</button>
+      </form>
+      <p class="feedback" id="scFeedbackNome"></p>
+    </div>
+
+    <div class="card">
+      <div>
+        <h2>Pastas</h2>
+        <p class="sub">Excluir uma pasta não apaga os scripts: eles vão para "Sem pasta".</p>
+      </div>
+      <div class="sc-pastas" id="scPastas"></div>
+      <form class="sc-inline" id="scFormPasta">
+        <input type="text" id="scNovaPasta" maxlength="40" autocomplete="off" placeholder="Nova pasta" aria-label="Nome da nova pasta" />
+        <button type="submit" class="btn-primary">Adicionar</button>
+      </form>
+      <p class="feedback" id="scFeedbackPastas"></p>
+    </div>
+
+    <div class="card">
+      <div>
+        <h2>Importar e exportar</h2>
+        <p class="sub">Arquivo .json para compartilhar scripts com o time. O backup geral do Gamma também leva os scripts.</p>
+      </div>
+      <div class="sc-inline">
+        <button type="button" class="btn-primary" id="scExportar">Exportar scripts (.json)</button>
+        <label class="btn-danger sc-btn-arquivo">Importar arquivo
+          <input type="file" id="scImportar" accept="application/json,.json" />
+        </label>
+      </div>
+      <div class="sc-import hidden" id="scImportResumo">
+        <p id="scImportTexto"></p>
+        <div class="sc-inline">
+          <button type="button" class="btn-primary" id="scImportManter">Importar e manter os meus</button>
+          <button type="button" class="btn-danger" id="scImportSubstituir">Importar e substituir</button>
+          <button type="button" class="btn-danger" id="scImportCancelar">Cancelar</button>
+        </div>
+      </div>
+      <p class="feedback" id="scFeedbackImport"></p>
+    </div>
+
+    <div class="card hidden" id="scCardOcultos">
+      <div>
+        <h2>Scripts padrão ocultos</h2>
+        <p class="sub">Scripts que vieram com o Gamma e você tirou da biblioteca.</p>
+      </div>
+      <div class="sc-pastas" id="scOcultos"></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- USAR (perguntas antes de copiar) -->
+<div class="modal-overlay hidden" id="scModalUso">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="scUsoTitulo">
+    <div class="modal-header">
+      <div>
+        <p class="eyebrow">Copiar script</p>
+        <h2 id="scUsoTitulo"></h2>
+      </div>
+      <button type="button" class="modal-close" id="scUsoFechar" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <form id="scUsoForm">
+      <div class="sc-perguntas" id="scUsoPerguntas"></div>
+      <div class="sc-previa" id="scUsoPrevia"></div>
+      <button type="submit" class="btn-primary">Copiar texto</button>
+    </form>
+  </div>
+</div>

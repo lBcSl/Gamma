@@ -7,9 +7,11 @@
 import { ler, gravar } from "./storage.js";
 import { todayKey } from "./datas.js";
 import { MODULOS } from "./modulos.js";
+import { PADROES_PERFIL } from "./perfil.js";
 
+// Perfil do agente (núcleo) + as chaves de cada módulo.
 function padroesDoBackup() {
-  return Object.assign({}, ...MODULOS.map((m) => (m.backup ? m.backup.padroes : {})));
+  return Object.assign({}, PADROES_PERFIL, ...MODULOS.map((m) => (m.backup ? m.backup.padroes : {})));
 }
 
 export async function exportBackup() {
