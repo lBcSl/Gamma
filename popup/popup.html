@@ -13,7 +13,7 @@
   <header class="topbar">
     <div class="brand">
       <div class="logo"><img class="logo-img" src="../icons/icon128.png" alt="" /></div>
-      <span class="brand-name">Gamma - Backlog</span>
+      <span class="brand-name">Gamma</span>
     </div>
     <div class="topbar-right">
       <span class="today" id="todayLabel"></span>
@@ -36,6 +36,17 @@
 
     <!-- ABA: CONFIG -->
     <section class="tab-panel" id="tab-config">
+      <form class="card" id="formNome" autocomplete="off">
+        <div class="card-title">
+          <span class="icon-circle"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+          <div>
+            <h2>Seu nome</h2>
+            <p class="hint">Entra no lugar de {agente} nos scripts.</p>
+          </div>
+        </div>
+        <input type="text" id="cfgNome" maxlength="60" aria-label="Seu nome" />
+        <button type="submit" class="btn-secondary">Salvar nome</button>
+      </form>
       <div class="card">
         <div class="card-title">
           <span class="icon-circle"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg></span>
@@ -50,6 +61,19 @@
           <strong>Importar backup</strong>
           <span class="hint">Clique para escolher o arquivo .json</span>
           <input type="file" id="inputImportar" accept="application/json" />
+        </label>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <span class="icon-circle"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><rect x="12" y="12" width="7" height="6" rx="1.5"/></svg></span>
+          <div>
+            <h2>Cartão no HelpDesk</h2>
+            <p class="hint">Oferece adicionar o chamado aberto que ainda não está no backlog.</p>
+          </div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="cfgCartaoHelpdesk" />
+          <span>Mostrar o cartão</span>
         </label>
       </div>
       <p class="feedback" id="feedbackConfig"></p>

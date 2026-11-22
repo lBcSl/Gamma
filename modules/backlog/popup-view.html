@@ -12,7 +12,7 @@
     <button type="button" id="btnPuxarHelpdesk" class="btn-secondary">Puxar do chamado aberto</button>
     <p class="hint hidden" id="f-clienteLabel"></p>
 
-    <!-- Suporte 2º Nível atende N2 e Acolhimento técnico: o tipo sugerido precisa ser confirmado -->
+    <!-- Suporte 2º Nível atende N2 e Acolhimento técnico: o tipo vem sugerido e pode ser trocado -->
     <div id="wrap-confirmaTipo" class="cond hidden">
       <span class="hint" id="confirmaTipoTexto"></span>
       <div class="seg-port" role="group" aria-label="Confirmar tipo">
@@ -80,6 +80,11 @@
       <span class="hint">Opcional</span>
     </label>
 
+    <label id="wrap-encaminhado" class="cond hidden">Encaminhado para
+      <input type="text" id="f-encaminhadoPara" autocomplete="off" placeholder="Setor ou pessoa" />
+      <span class="hint">Opcional</span>
+    </label>
+
     <button type="submit" class="btn-primary">Salvar chamado</button>
     <p class="feedback" id="feedbackNovo"></p>
   </form>
@@ -103,6 +108,10 @@
       </label>
       <label id="wrap-dataPrevistaBusca" class="cond hidden"><span id="s-dataPrevistaLabel">Data do agendamento</span>
         <input type="date" id="s-dataPrevista" />
+        <span class="hint">Opcional</span>
+      </label>
+      <label id="wrap-encaminhadoBusca" class="cond hidden">Encaminhado para
+        <input type="text" id="s-encaminhadoPara" autocomplete="off" placeholder="Setor ou pessoa" />
         <span class="hint">Opcional</span>
       </label>
       <button id="btnAtualizarStatus" class="btn-primary">Atualizar status</button>

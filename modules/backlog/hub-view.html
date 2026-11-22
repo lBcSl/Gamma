@@ -10,6 +10,12 @@
   <h1>Dashboard de Chamados</h1>
 </div>
 
+<!-- Aviso: Inativos que passaram a contar como finalizados (some depois do "Ok, entendi") -->
+<div class="aviso hidden" id="avisoInativos" role="status">
+  <p id="avisoInativosTexto"></p>
+  <button type="button" class="btn-aviso" id="btnAvisoInativos">Ok, entendi</button>
+</div>
+
 <!-- BACKLOG GERAL -->
 <section class="view active" id="view-backlog">
   <div class="counters" id="backlogCounters"></div>
@@ -214,6 +220,11 @@
 
       <label id="m-wrap-dataPrevista" class="cond hidden"><span id="m-dataPrevistaLabel">Data do agendamento</span>
         <input type="date" id="m-dataPrevista" />
+        <span class="hint">Opcional</span>
+      </label>
+
+      <label id="m-wrap-encaminhado" class="cond hidden">Encaminhado para
+        <input type="text" id="m-encaminhadoPara" autocomplete="off" placeholder="Setor ou pessoa" />
         <span class="hint">Opcional</span>
       </label>
 

@@ -1,0 +1,100 @@
+/* scripts.css - tela do Scripts no HUB. Usa as variáveis de cor do hub.css. */
+
+.sc-layout { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.sc-lista-card { flex: 1 1 300px; max-width: 400px; padding: 20px; gap: 14px; }
+.sc-lista-card .card-head { padding: 0 4px; }
+.sc-lista-card .search { flex: 0 0 auto; }
+.sc-lista-card .search svg { top: 13px; }
+.sc-lista-card .search input {
+  height: 44px; border: none; border-radius: var(--radius-field); background: var(--surface-2);
+  color: var(--ink); font-size: 14px; font-weight: 500;
+}
+.sc-lista-card .search input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.sc-btn-novo { height: 40px; padding: 0 16px; }
+
+.sc-lista { display: flex; flex-direction: column; gap: 14px; max-height: 620px; overflow-y: auto; }
+.sc-grupo { display: flex; flex-direction: column; gap: 4px; }
+.sc-grupo-nome {
+  margin: 0 0 2px; padding: 0 8px; font-size: 12px; font-weight: 700; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.sc-grupo-nome span { font-weight: 600; color: var(--text-mute); }
+.sc-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: none;
+  border-radius: 16px; background: transparent; color: var(--ink); text-align: left; cursor: pointer;
+}
+.sc-item:hover { background: var(--surface-2); }
+.sc-item.active { background: var(--ink); color: var(--on-ink); }
+.sc-item.active .sc-chip-atalho { background: var(--ink-chip); color: var(--on-ink); }
+.sc-item.active .sc-item-texto span, .sc-item.active .sc-marca { color: var(--on-ink-dim); }
+.sc-item-texto { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.sc-item-texto strong { font-size: 14px; font-weight: 600; }
+.sc-item-texto span { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-chip-atalho {
+  flex: 0 0 auto; padding: 4px 9px; border-radius: 999px; background: var(--chip); color: var(--ink-2);
+  font-size: 12px; font-weight: 700; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+.sc-marca { flex: 0 0 auto; font-size: 11px; font-weight: 600; color: var(--text-dim); }
+
+.sc-editor { flex: 999 1 460px; min-width: 0; }
+.sc-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; }
+.sc-row .sc-campo:first-child { grid-column: 1 / -1; }
+.sc-campo { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-body); min-width: 0; }
+.sc-campo input, .sc-campo select, .sc-campo textarea, .sc-inline input, .sc-pasta input, .sc-perguntas input, .sc-perguntas select {
+  width: 100%; min-width: 0; border: none; border-radius: var(--radius-field); background-color: var(--surface-2);
+  color: var(--ink); font-size: 14px; font-weight: 500;
+}
+.sc-campo input, .sc-campo select, .sc-inline input, .sc-pasta input, .sc-perguntas input, .sc-perguntas select { height: 46px; padding: 0 14px; }
+.sc-campo select, .sc-perguntas select {
+  appearance: none; padding-right: 34px; background-image: var(--chevron); background-repeat: no-repeat;
+  background-position: right 14px center; background-size: 13px; cursor: pointer;
+}
+.sc-campo textarea { padding: 14px; line-height: 1.55; resize: vertical; min-height: 150px; }
+.sc-campo :focus-visible, .sc-inline input:focus-visible, .sc-pasta input:focus-visible, .sc-perguntas :focus-visible {
+  outline: 2px solid var(--ink); outline-offset: 2px;
+}
+.sc-atalho { position: relative; display: flex; }
+.sc-barra {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--text-dim);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+.sc-atalho input { padding-left: 28px; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-weight: 600; }
+
+.sc-vars, .sc-previa-wrap { display: flex; flex-direction: column; gap: 8px; }
+.sc-vars-titulo { font-size: 12px; font-weight: 600; color: var(--text-body); }
+.sc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sc-chip {
+  height: 32px; padding: 0 12px; border: none; border-radius: 999px; background: var(--surface-2); color: var(--ink-2);
+  font-size: 12px; font-weight: 600; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; cursor: pointer;
+}
+.sc-chip:hover { background: var(--ink); color: var(--on-ink); }
+.sc-previa {
+  padding: 14px 16px; border-radius: var(--radius-field); background: var(--cond); color: var(--text-body);
+  font-size: 14px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; min-height: 52px;
+}
+.sc-acoes { display: flex; flex-wrap: wrap; gap: 10px; }
+.sc-badge-mod { background: var(--chip); color: var(--ink-2); }
+
+/* configurações */
+.sc-config { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start; }
+.sc-inline { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.sc-inline input { flex: 1 1 180px; }
+.sc-pastas { display: flex; flex-direction: column; gap: 8px; }
+.sc-pasta { display: flex; align-items: center; gap: 8px; }
+.sc-pasta input { flex: 1; }
+.sc-pasta-qtd {
+  min-width: 30px; height: 30px; padding: 0 8px; border-radius: 999px; background: var(--chip); color: var(--ink-2);
+  font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.sc-pasta .btn-icon[disabled] { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+.sc-oculto-nome { flex: 1; font-size: 14px; font-weight: 600; }
+.sc-btn-peq { height: 38px; padding: 0 14px; font-size: 13px; }
+.sc-btn-arquivo { display: inline-flex; align-items: center; position: relative; }
+.sc-btn-arquivo input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.sc-btn-arquivo:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+.sc-import { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--radius-field); background: var(--cond); }
+.sc-import p { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.5; }
+
+/* modal de uso */
+.sc-perguntas { display: flex; flex-direction: column; gap: 12px; }
+.sc-perguntas label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-body); }

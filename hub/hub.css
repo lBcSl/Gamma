@@ -382,6 +382,25 @@ td.clicavel:hover { text-decoration: underline; text-decoration-style: dotted; }
   white-space: nowrap;
 }
 .acoes { display: flex; gap: 6px; justify-content: flex-end; }
+
+/* Aviso no topo do dashboard (ex: Inativos que viraram finalizados) */
+.aviso {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border-radius: 24px;
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.aviso p { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.5; }
+.btn-aviso {
+  height: 38px; padding: 0 18px;
+  border: none; border-radius: 999px;
+  background: var(--surface); color: var(--ink);
+  font: inherit; font-size: 13px; font-weight: 700;
+  cursor: pointer;
+}
+.btn-aviso:hover { background: var(--surface-2); }
 .grid td.num .cliente { display: block; margin-top: 2px; font-size: 12px; font-weight: 500; color: var(--text-dim); white-space: normal; }
 
 .empty { text-align: center; color: var(--text-dim); padding: 24px 0; font-size: 14px; margin: 0; }

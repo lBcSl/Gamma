@@ -3,6 +3,7 @@
 // a tela do módulo indicado na URL (hub.html#/<id>; sem id, abre o primeiro).
 
 import { MODULOS, moduloPorId } from "../core/modulos.js";
+import { garantirNomeDoAgente } from "../core/boas-vindas.js";
 
 const COM_TELA = MODULOS.filter((m) => m.hub);
 
@@ -52,4 +53,6 @@ document.addEventListener("DOMContentLoaded", () => {
   montarMenu();
   abrirModulo();
   window.addEventListener("hashchange", abrirModulo);
+  garantirNomeDoAgente(); // primeiro acesso: pede o nome do agente
+
 });
